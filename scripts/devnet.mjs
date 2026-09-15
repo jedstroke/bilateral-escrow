@@ -6,7 +6,9 @@
  *   node scripts/devnet.mjs balance <addr>    balance of any address
  *   node scripts/devnet.mjs mint <addr> [n]   give an address tokens (default 10 STRK and 10 ETH)
  *   node scripts/devnet.mjs status            chain id, block count, RPC and UI URLs
+ *   node scripts/devnet.mjs ui                open the block explorer in your browser
  */
+import { spawn } from "node:child_process";
 
 const RPC = process.env.RPC_URL ?? "http://127.0.0.1:5050/rpc";
 const BASE = RPC.replace(/\/rpc\/?$/, "");
@@ -100,8 +102,20 @@ async function status() {
   console.log(`Txs        ${s.transactions_count ?? s.transaction_count ?? "?"}`);
 }
 
+function ui() {
+  const url = `${BASE}/ui`;
+  const [cmd, args] =
+    process.platform === "win32" ? ["cmd", ["/c", "start", "", url]]
+    : process.platform === "darwin" ? ["open", [url]]
+    : ["xdg-open", [url]];
+  const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+  child.on("error", () => console.log(`Could not launch a browser. Open ${url} yourself.`));
+  child.unref();
+  console.log(url);
+}
+
 const [command, ...args] = process.argv.slice(2);
-const commands = { accounts, balance, mint, status };
+const commands = { accounts, balance, mint, status, ui };
 
 if (!commands[command]) {
   fail(`usage: node scripts/devnet.mjs <${Object.keys(commands).join(" | ")}> [args]`);

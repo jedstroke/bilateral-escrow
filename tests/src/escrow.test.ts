@@ -104,7 +104,7 @@ beforeAll(async () => {
   if (!stranger) throw new Error("need at least 5 predeployed accounts (start devnet with --accounts 5)");
 
   eth = await erc20(provider, ETH);
-  escrow = await deployEscrow(admin, { treasury: treasury.address, fees: FEES, windows: WINDOWS });
+  ({ escrow } = await deployEscrow(admin, { treasury: treasury.address, fees: FEES, windows: WINDOWS }));
   await send(admin, escrow.populate("set_token_allowed", { token: ETH, allowed: true }));
 });
 

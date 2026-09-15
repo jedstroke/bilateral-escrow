@@ -1,6 +1,6 @@
 contracts/target/
 node_modules/
 tests/node_modules/
-tests/deployment.json
+deployments/devnet.json
 .snfoundry_cache/
 package-lock.json

@@ -6,6 +6,7 @@ import {
   CallData,
   Contract,
   RpcProvider,
+  hash,
   json,
   logger,
   num,
@@ -47,20 +48,45 @@ export function loadArtifacts(): { sierra: CompiledSierra; casm: CompiledSierraC
   return { sierra: read("contract_class.json"), casm: read("compiled_contract_class.json") };
 }
 
+/** Calldata for the constructor, so it can be shown before it is sent. */
+export function escrowConstructorCalldata(args: {
+  owner: string;
+  treasury: string;
+  fees: Fees;
+  windows: Windows;
+}) {
+  const { sierra } = loadArtifacts();
+  return new CallData(sierra.abi).compile("constructor", args);
+}
+
+/** Class hash of the compiled contract, without touching the network. */
+export function escrowClassHash(): string {
+  return hash.computeContractClassHash(loadArtifacts().sierra);
+}
+
 export async function deployEscrow(
   admin: Account,
   args: { treasury: string; fees: Fees; windows: Windows },
-): Promise<Contract> {
+): Promise<{ escrow: Contract; classHash: string; alreadyDeclared: boolean }> {
   const { sierra, casm } = loadArtifacts();
-  const constructorCalldata = new CallData(sierra.abi).compile("constructor", {
-    owner: admin.address,
-    treasury: args.treasury,
-    fees: args.fees,
-    windows: args.windows,
-  });
+  const classHash = escrowClassHash();
+  const alreadyDeclared = await admin.provider
+    .getClassByHash(classHash)
+    .then(() => true)
+    .catch(() => false);
+
+  const constructorCalldata = escrowConstructorCalldata({ owner: admin.address, ...args });
+  // declareAndDeploy skips the declare when the class is already known, so this is
+  // safe to re-run on a network where someone has deployed this contract before.
   const { deploy } = await admin.declareAndDeploy({ contract: sierra, casm, constructorCalldata });
   await admin.provider.waitForTransaction(deploy.transaction_hash, WAIT);
-  return new Contract({ abi: sierra.abi, address: deploy.contract_address, providerOrAccount: admin });
+
+  const escrow = new Contract({
+    abi: sierra.abi,
+    address: deploy.contract_address,
+    providerOrAccount: admin,
+  });
+  return { escrow, classHash, alreadyDeclared };
 }
 
 /** A `Contract` bound to a different signer. Same ABI and address. */

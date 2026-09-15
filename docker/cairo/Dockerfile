@@ -7,7 +7,7 @@ ARG SNFOUNDRY_VERSION=0.63.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates git \
+    && apt-get install -y --no-install-recommends curl ca-certificates git gosu \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/root/.local/bin:${PATH}"
@@ -20,4 +20,12 @@ RUN curl -sSL https://raw.githubusercontent.com/foundry-rs/starknet-foundry/mast
 
 RUN scarb --version && snforge --version && sncast --version
 
+# Let the toolchain run as any uid (see entrypoint.sh). HOME stays /root because that is
+# where scarb and snforge were installed; the chmod lets a non-root uid use them.
+ENV HOME=/root XDG_CACHE_HOME=/root/.cache XDG_DATA_HOME=/root/.local/share
+RUN mkdir -p /root/.cache/scarb && chmod -R a+rwX /root
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 WORKDIR /work/contracts
+ENTRYPOINT ["/entrypoint.sh"]

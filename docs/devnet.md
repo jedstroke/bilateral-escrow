@@ -1,10 +1,17 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/weselling-wordmark-on-dark.png">
+  <img src="assets/weselling-wordmark-on-light.png" alt="WeSelling" width="220">
+</picture>
+
 # Working with the local devnet
 
 Devnet is a throwaway Starknet that runs in Docker. It is not a testnet you share with anyone — it lives and dies with the container on your machine.
 
 It starts with `--seed=0`, so the same five accounts with the same private keys appear every single time. You can hardcode them, write them down, whatever. They are worthless.
 
-```powershell
+See [deploy.md](deploy.md) for Sepolia and mainnet.
+
+```sh
 npm run up          # start it
 npm run accounts    # who's on it, with keys and balances
 npm run status      # chain id, block count
@@ -56,18 +63,16 @@ There is no USDC here. The escrow does not care — it works with any ERC20 the 
 
 To give any address money, including a wallet address that devnet has never seen:
 
-```powershell
+```sh
 npm run mint -- 0xYourAddress 100     # 100 ETH and 100 STRK
 npm run balance -- 0xYourAddress
 ```
 
-## tests/deployment.json
+## deployments/devnet.json
 
-This file is **output, not input**. Nothing reads it. `npm run deploy` writes it so that you know where the contract landed, and so a frontend or a script can pick the address up later.
+This file is **output, not input**. Nothing reads it. `npm run deploy` writes it so you know where the contract landed and so a frontend or script can pick the address up later. There is one file per network; the devnet one is gitignored because that chain is wiped on every reset.
 
-The tests ignore it completely. Every test run declares and deploys a fresh escrow in `beforeAll`, so the suite never depends on a previous deployment. You do not need to fill anything in before running tests.
-
-Because it is written per deployment, it goes stale the moment you `npm run reset` — the chain is gone and that address no longer exists. It is in `.gitignore` for that reason.
+The tests ignore it completely. Every run declares and deploys a fresh escrow in `beforeAll`, so the suite never depends on a previous deployment. You do not need to fill anything in before running tests.
 
 ## Your browser wallet
 
@@ -91,10 +96,10 @@ For everything in this repo you do not need the extension at all. The tests and 
 
 `sncast` is in the toolchain image, so you can call a deployed contract without writing any TypeScript:
 
-```powershell
+```sh
 npm run shell
 # then, inside the container:
-sncast call --url http://devnet:5050/rpc `
+sncast call --url http://devnet:5050/rpc \
   --contract-address 0xYourEscrowAddress --function deal_count
 ```
 
@@ -103,7 +108,7 @@ Success: Call completed
 Response:     0_u64
 ```
 
-Note the URL inside the container is `http://devnet:5050/rpc` — containers reach each other by service name. From Windows it is `http://127.0.0.1:5050/rpc`. Both point at the same node.
+Note the URL inside the container is `http://devnet:5050/rpc` — containers reach each other by service name. From your own machine it is `http://127.0.0.1:5050/rpc`. Both point at the same node.
 
 Writes need a signing account configured in sncast, which is more setup than it is worth here; for anything that changes state, add it to a script in `tests/scripts/` instead.
 

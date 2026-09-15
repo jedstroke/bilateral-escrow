@@ -1,9 +1,12 @@
-# Three services, none of which need WSL from your side:
+# Three services:
 #   devnet  - local Starknet node (always on while you work)
 #   cairo   - Scarb + Starknet Foundry toolchain (run on demand: `docker compose run --rm cairo scarb build`)
 #   tests   - Node 22 running the TypeScript tests against devnet (run on demand)
 #
 # The `tools` and `test` profiles keep cairo/tests from starting with a plain `docker compose up`.
+#
+# DOCKER_UID / DOCKER_GID: on Linux, scripts/compose.mjs sets these to your own uid/gid so the
+# files these containers write are yours. Unset (root) is right for Docker Desktop on Windows/macOS.
 
 services:
   devnet:
@@ -25,25 +28,31 @@ services:
     image: bilateral-escrow/cairo
     profiles: ["tools"]
     working_dir: /work/contracts
+    environment:
+      DOCKER_UID: ${DOCKER_UID:-0}
+      DOCKER_GID: ${DOCKER_GID:-0}
     volumes:
       - ./contracts:/work/contracts
       - scarb-cache:/root/.cache/scarb
 
   tests:
-    image: node:22-alpine
+    build: ./docker/tests
+    image: bilateral-escrow/tests
     profiles: ["test"]
     working_dir: /work/tests
     environment:
       RPC_URL: http://devnet:5050/rpc
+      DOCKER_UID: ${DOCKER_UID:-0}
+      DOCKER_GID: ${DOCKER_GID:-0}
     depends_on:
       - devnet
     volumes:
       - ./contracts/target:/work/contracts/target:ro
       - ./tests:/work/tests
+      # Deployment records must land on the host, not inside a --rm container.
+      - ./deployments:/work/deployments
       # Linux node_modules live in a volume so they never mix with a Windows install.
       - node_modules:/work/tests/node_modules
-    entrypoint: ["sh", "-c", "npm install --no-audit --no-fund --loglevel=error && exec \"$@\"", "--"]
-    command: ["npm", "test"]
 
 volumes:
   scarb-cache:

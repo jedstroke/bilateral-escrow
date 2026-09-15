@@ -1,4 +1,11 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/weselling-wordmark-on-dark.png">
+  <img src="assets/weselling-wordmark-on-light.png" alt="WeSelling" width="220">
+</picture>
+
 # Bilateral Escrow
+
+A [WeSelling](https://weselling.store) initiative.
 
 A buyer and a seller who don't trust each other, and a contract that holds both of their money until the deal is done.
 
